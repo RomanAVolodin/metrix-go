@@ -75,10 +75,8 @@ func (p *Poller) printMetrics() {
 }
 
 func sendMetric(metric *MetricForExport) error {
-	urlString := fmt.Sprintf("http://localhost/update/%s/%s/%s", metric.stringType, metric.name, metric.value)
+	urlString := fmt.Sprintf("http://localhost:8080/update/%s/%s/%s", metric.stringType, metric.name, metric.value)
 	resp, err := http.Post(urlString, "Content-Type: text/plain", nil)
-
-	fmt.Printf("Sent metric %s to url %s", metric.name, urlString)
 
 	if err != nil {
 		return err
@@ -106,7 +104,6 @@ func main() {
 		select {
 		case <-tickerPoll.C:
 			poller.fetchMetrics()
-			//poller.printMetrics()
 		case <-tickerReport.C:
 			fmt.Println("Sending report")
 			for _, metric := range poller.Metrics {
