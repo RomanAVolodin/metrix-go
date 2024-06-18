@@ -85,7 +85,7 @@ func sendMetric(metric *MetricForExport) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.New("Bad status code")
+		return errors.New("bad status code")
 	}
 
 	return nil
@@ -105,7 +105,6 @@ func main() {
 		case <-tickerPoll.C:
 			poller.fetchMetrics()
 		case <-tickerReport.C:
-			fmt.Println("Sending report")
 			for _, metric := range poller.Metrics {
 				go sendMetric(&metric)
 			}
