@@ -3,6 +3,7 @@ package entities
 import (
 	"errors"
 	"fmt"
+	"github.com/RomanAVolodin/metrix-go/internal/config"
 	"math/rand"
 	"net/http"
 	"reflect"
@@ -21,7 +22,7 @@ func (m MetricForExport) String() string {
 }
 
 func (m *MetricForExport) SendToServer() error {
-	urlString := fmt.Sprintf("http://localhost:8080/update/%s/%s/%s", m.StringType, m.Name, m.Value)
+	urlString := fmt.Sprintf("%s/update/%s/%s/%s", config.ServerHost, m.StringType, m.Name, m.Value)
 	resp, err := http.Post(urlString, "Content-Type: text/plain", nil)
 
 	if err != nil {
