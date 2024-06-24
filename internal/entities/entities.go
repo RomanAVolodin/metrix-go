@@ -1,7 +1,6 @@
 package entities
 
 import (
-	"errors"
 	"fmt"
 	"github.com/RomanAVolodin/metrix-go/internal/config"
 	"math/rand"
@@ -11,37 +10,25 @@ import (
 	"strconv"
 )
 
-type MetricForExport struct {
+const (
+	MetricCounter = "counter"
+	MetricGauge   = "gauge"
+)
+
+type Metric struct {
 	Name       string
 	Value      string
-	StringType string
+	MetricType string
 }
 
-func (m MetricForExport) String() string {
-	return m.Name + ":" + m.Value + ":" + m.StringType
-}
-
-func (m *MetricForExport) SendToServer() error {
-	urlString := fmt.Sprintf("%s/update/%s/%s/%s", config.ServerHost, m.StringType, m.Name, m.Value)
-	resp, err := http.Post(urlString, "Content-Type: text/plain", nil)
-
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("bad status code")
-	}
-
-	return nil
+func (m Metric) String() string {
+	return m.Name + ":" + m.Value + ":" + m.MetricType
 }
 
 type Poller struct {
 	PollCount   uint32
 	RandomValue float64
-	Metrics     []MetricForExport
+	Metrics     []*Metric
 }
 
 func (p *Poller) FetchMetrics() {
@@ -49,7 +36,7 @@ func (p *Poller) FetchMetrics() {
 	runtime.ReadMemStats(&ms)
 	metrics := reflect.ValueOf(ms)
 
-	mfe := make([]MetricForExport, 0, metrics.NumField())
+	mfe := make([]*Metric, 0, metrics.NumField())
 
 	for i := 0; i < metrics.NumField(); i++ {
 		name := metrics.Type().Field(i).Name
@@ -66,20 +53,20 @@ func (p *Poller) FetchMetrics() {
 			continue
 		}
 
-		mfe = append(mfe, MetricForExport{name, strValue, stringType})
+		mfe = append(mfe, &Metric{name, strValue, stringType})
 	}
 
 	p.RandomValue = rand.ExpFloat64()
 	p.PollCount++
-	mfe = append(mfe, MetricForExport{
+	mfe = append(mfe, &Metric{
 		Name:       "PollCount",
 		Value:      strconv.Itoa(int(p.PollCount)),
-		StringType: "counter",
+		MetricType: MetricCounter,
 	})
-	mfe = append(mfe, MetricForExport{
+	mfe = append(mfe, &Metric{
 		Name:       "RandomValue",
 		Value:      strconv.FormatFloat(p.RandomValue, 'f', -1, 64),
-		StringType: "gauge",
+		MetricType: MetricGauge,
 	})
 	p.Metrics = mfe
 }
@@ -89,4 +76,29 @@ func (p *Poller) PrintMetrics() {
 		fmt.Println(m)
 	}
 	fmt.Println(len(p.Metrics))
+}
+
+func (p *Poller) SendToServer() error {
+	for _, m := range p.Metrics {
+		go func(m *Metric) {
+			urlString := fmt.Sprintf("%s/update/%s/%s/%s", config.ServerHost, m.MetricType, m.Name, m.Value)
+			_, _ = http.Post(urlString, "Content-Type: text/plain", nil)
+
+			//if err != nil {
+			//	return err
+			//}
+			//
+			//defer resp.Body.Close()
+			//
+			//if resp.StatusCode != http.StatusOK {
+			//	return errors.New("bad status code")
+			//}
+
+			fmt.Println(urlString)
+		}(m)
+
+	}
+
+	fmt.Println("SENT", len(p.Metrics))
+	return nil
 }

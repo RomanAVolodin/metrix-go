@@ -15,9 +15,7 @@ func main() {
 		case <-tickerPoll.C:
 			poller.FetchMetrics()
 		case <-tickerReport.C:
-			for _, metric := range poller.Metrics {
-				go metric.SendToServer()
-			}
+			poller.SendToServer()
 		}
 	}
 }
